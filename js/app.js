@@ -44,8 +44,8 @@ window.toggleSidebar = () => {
 
 // --- 3. Timer Logic ---
 window.toggleTimer = Utils.toggleTimer;
-window.resetTimer = Utils.resetTimer;
-window.toggleTimerEdit = Utils.toggleTimerEdit; 
+window.resetTimer = Utils.resetTimer; // <--- INI WAJIB ADA
+window.toggleTimerEdit = Utils.toggleTimerEdit;
 window.saveCustomTimer = () => {
     const val = document.getElementById('custom-minutes-input').value;
     Utils.saveCustomTime(val);
@@ -298,10 +298,17 @@ onAuthStateChanged(auth, (user) => {
         currentUser = user;
         overlay.style.display = 'none';
         document.getElementById('user-name').innerText = user.displayName || user.email.split('@')[0];
-        
         const avatar = document.getElementById('user-avatar');
         if(avatar) avatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${user.email}&background=1e293b&color=fff`;
         
+        // --- TAMBAHKAN INI (UPDATE MOBILE MENU) ---
+        const mobileName = document.getElementById('mobile-user-name');
+        const mobileAvatar = document.getElementById('mobile-user-avatar');
+        
+        if (mobileName) mobileName.innerText = user.displayName || user.email.split('@')[0];
+        if (mobileAvatar) mobileAvatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${user.email}&background=1e293b&color=fff`;
+        // ------------------------------------------
+
         // Start Listeners
         initRealtimeListeners(user.uid);
         Utils.initTimer(); 
@@ -319,65 +326,92 @@ onAuthStateChanged(auth, (user) => {
 });
 
 function initRealtimeListeners(uid) {
+    // Helper untuk query standar (Collection + Sort by CreatedAt Desc)
     const qRef = (c) => query(collection(db, 'artifacts', appId, 'users', uid, c), orderBy('createdAt', 'desc'));
     
-    // Logs
+    // 1. Logs
     onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'logs'), orderBy('createdAt', 'desc'), limit(50)), s => {
         const todayStr = new Date().toDateString();
         UI.renderDailyLogUI(s.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => l.date === todayStr));
     });
-    // Goals
+
+    // 2. Goals
     onSnapshot(qRef('goals'), s => {
         globalGoals = s.docs.map(d => ({ id: d.id, ...d.data() }));
         UI.renderGoals(globalGoals.filter(x => !x.deleted));
+        
+        // Update Dropdown di Modal Project
         const sel = document.getElementById('new-project-goal');
         if(sel) sel.innerHTML = '<option value="">-- No Goal Linked --</option>' + globalGoals.map(g => `<option value="${g.id}">${g.title}</option>`).join('');
     });
-    // Projects
+
+    // 3. Projects
     onSnapshot(qRef('projects'), s => {
-        // 1. Ambil data project bersih (filter yang dihapus)
         const projData = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted);
         
-        // 2. PENTING: Simpan ke variabel global agar fitur "Move Task" bisa membacanya
+        // Update Widget di Home
+        const activeCount = projData.filter(p => p.status === 'progress').length;
+        const homeProj = document.getElementById('home-active-projects');
+        if(homeProj) homeProj.innerText = activeCount;
+        
+        // Simpan ke Global Data (untuk fitur Move Task)
         globalData.projects = projData; 
 
-        // 3. Render ke UI (Kode render dan drag-drop tetap sama)
+        // Render UI
         UI.renderProjects(projData, globalGoals, async (evt) => {
             const pid = evt.item.getAttribute('data-id');
             const st = evt.to.id.replace('col-', '');
             if (pid) await DB.updateItem(uid, 'projects', pid, { status: st });
         });
     });
-    // Tasks
+
+    // 4. Tasks
     onSnapshot(qRef('tasks'), s => {
         globalData.tasks = s.docs.map(d => d.data());
         UI.renderTasks(s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted));
     });
-    // Finance
+
+    // 5. Finance (Dengan Fix Urutan Render)
     onSnapshot(qRef('transactions'), s => {
         globalData.transactions = s.docs.map(d => d.data());
         const transData = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted);
+        
+        // Render dulu agar angka saldo terupdate
         UI.renderFinance(transData);
         UI.renderFinanceChart(transData);
+
+        // Baru ambil teks saldo untuk Widget Home
+        setTimeout(() => {
+             const bal = document.getElementById('finance-balance').innerText; 
+             const homeBal = document.getElementById('home-balance-display');
+             if(homeBal) homeBal.innerText = bal;
+        }, 100);
     });
-    // Habits
+
+    // 6. Habits
     onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'habits'), orderBy('createdAt', 'asc')), s => {
         globalData.habits = s.docs.map(d => d.data());
         UI.renderHabits(s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted));
     });
-    // Library
-    onSnapshot(qRef('library'), s => UI.renderLibrary(s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted)));
-    // Notes
-    onSnapshot(qRef('notes'), s => UI.renderNotes(s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted)));
+
+    // 7. Library (PASTIKAN INI ADA)
+    onSnapshot(qRef('library'), s => {
+        UI.renderLibrary(s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted));
+    });
+
+    // 8. Notes / Second Brain (PASTIKAN INI ADA)
+    onSnapshot(qRef('notes'), s => {
+        UI.renderNotes(s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted));
+    });
     
-    // Wellness
+    // 9. Wellness
     const today = new Date().toISOString().split('T')[0];
     onSnapshot(doc(db, 'artifacts', appId, 'users', uid, 'wellness', today), (d) => {
         if (d.exists()) { const dt = d.data(); UI.updateMoodUI(dt.mood); UI.updateWaterUI(dt.water || 0); }
         else { UI.updateWaterUI(0); UI.updateMoodUI(null); }
     });
 
-    // 9. Gamification Stats (Listener)
+    // 10. Gamification Stats
     onSnapshot(doc(db, 'artifacts', appId, 'users', uid, 'stats', 'profile'), (d) => {
         if (d.exists()) {
             const s = d.data();
@@ -387,11 +421,9 @@ function initRealtimeListeners(uid) {
         }
     });
 
-    // 10. Categories
+    // 11. Categories
     onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'categories'), orderBy('name', 'asc')), s => {
         const cats = s.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        // Jika kosong, buat default (hanya sekali jalan)
         if (cats.length === 0) {
             DB.seedDefaultCategories(uid);
         } else {
@@ -472,6 +504,66 @@ document.addEventListener('click', (e) => {
         window.toggleFab();
     }
 });
+
+// Variable sementara untuk menyimpan project yang sedang diklik
+let selectedProject = null;
+
+window.openProjectSheet = (project) => {
+    selectedProject = project;
+    document.getElementById('sheet-project-title').innerText = project.name;
+    document.getElementById('sheet-project-status').innerText = `STATUS: ${project.status.toUpperCase()}`;
+    
+    // Tampilkan Sheet
+    const sheet = document.getElementById('project-action-sheet');
+    sheet.classList.remove('hidden');
+    sheet.classList.add('flex');
+};
+
+window.closeProjectSheet = () => {
+    selectedProject = null;
+    const sheet = document.getElementById('project-action-sheet');
+    sheet.classList.add('hidden');
+    sheet.classList.remove('flex');
+};
+
+window.sheetMove = async (newStatus) => {
+    if(selectedProject && currentUser) {
+        await DB.updateItem(currentUser.uid, 'projects', selectedProject.id, { status: newStatus });
+        window.closeProjectSheet();
+        Utils.showEnhancedNotification(`Moved to ${newStatus}`, 'success');
+    }
+};
+
+window.sheetDelete = () => {
+    if(selectedProject) {
+        window.askDelete('projects', selectedProject.id);
+        window.closeProjectSheet();
+    }
+};
+
+window.sheetStartFocus = () => {
+    window.closeProjectSheet();
+    window.switchView('dashboard');
+    // Set timer & start (Logika sederhana)
+    // Bisa dikembangkan untuk menyimpan nama project ke sesi fokus
+    Utils.showEnhancedNotification('Ayo Fokus!', 'success');
+    window.toggleTimer(); 
+};
+
+window.toggleDoneList = () => {
+    const container = document.getElementById('done-container');
+    const chevron = document.getElementById('done-chevron');
+    
+    if (container.classList.contains('hidden')) {
+        // BUKA
+        container.classList.remove('hidden');
+        chevron.style.transform = 'rotate(180deg)';
+    } else {
+        // TUTUP
+        container.classList.add('hidden');
+        chevron.style.transform = 'rotate(0deg)';
+    }
+};
 
 window.moveTaskToProject = async (taskId) => {
     // 1. Ambil nama project (Bisa pakai prompt sederhana atau modal kalau mau canggih)

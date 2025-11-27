@@ -122,16 +122,24 @@ export function toggleTimer() {
 }
 
 export function resetTimer() {
-    clearInterval(tInt);
+    clearInterval(tInt); // Stop timer yang jalan
+    
+    // Ambil durasi custom terakhir, atau default 25
     const savedDur = parseInt(localStorage.getItem('pomoDuration')) || 25;
     
+    // Reset state di LocalStorage
     localStorage.setItem('pomoIsRun', 'false');
     localStorage.removeItem('pomoEndTime');
     localStorage.setItem('pomoLeft', savedDur * 60);
     
+    // Update Tampilan ke awal (misal 25:00)
     updateDisplay(savedDur * 60);
-    updateBtnUI(false);
-    document.title = "Singgih Life OS";
+    updateBtnUI(false); // Kembalikan tombol jadi "Start"
+    
+    document.title = "Singgih Life OS"; // Reset judul tab
+    
+    // Debugging (Opsional: Cek di console browser)
+    console.log("Timer di-reset ke:", savedDur); 
 }
 
 function startInterval(endTime) {

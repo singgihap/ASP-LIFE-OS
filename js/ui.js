@@ -175,19 +175,95 @@ export function renderHabits(data) {
         list.appendChild(div);
     });
 }
+
+// Di js/ui.js - renderProjects
 export function renderProjects(data, globalGoals, onDragEndCallback) {
-    ['col-todo', 'col-progress', 'col-done'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ''; });
-    data.forEach(p => {
-        const goal = globalGoals.find(g => g.id === p.goalId);
-        const goalTag = goal ? `<div class="text-[10px] text-orange-400 mb-1 flex items-center gap-1"><span class="material-symbols-rounded text-[10px]">flag</span> ${goal.title}</div>` : '';
-        const card = document.createElement('div');
-        card.className = 'bg-slate-800 p-3 rounded-xl border border-slate-700 shadow-sm hover:border-blue-500/50 cursor-pointer relative mb-2 group';
-        card.setAttribute('data-id', p.id);
-        card.innerHTML = `${goalTag}<h4 class="text-sm font-bold text-white leading-snug">${p.name}</h4><button onclick="window.askDelete('projects','${p.id}')" class="absolute top-2 right-2 text-slate-600 hover:text-red-400 opacity-100 md:opacity-0 md:group-hover:opacity-100"><span class="material-symbols-rounded text-sm">delete</span></button>`;
-        const target = p.status === 'done' ? 'col-done' : (p.status === 'progress' ? 'col-progress' : 'col-todo');
-        const col = document.getElementById(target); if(col) col.appendChild(card);
+    // 1. Bersihkan Container
+    ['col-todo', 'col-progress', 'col-done'].forEach(id => { 
+        const el = document.getElementById(id); 
+        if(el) el.innerHTML = ''; 
     });
-    ['col-todo', 'col-progress', 'col-done'].forEach(c => { const el = document.getElementById(c); if (el) new Sortable(el, { group: 'kanban', animation: 150, ghostClass: 'sortable-ghost', onEnd: (evt) => onDragEndCallback(evt) }); });
+
+    // 2. Pisahkan Data
+    const todo = data.filter(p => p.status === 'todo');
+    const progress = data.filter(p => p.status === 'progress');
+    const done = data.filter(p => p.status === 'done');
+
+    // 3. Render Helper (Fungsi kecil untuk bikin kartu)
+    const createCard = (p) => {
+        const goal = globalGoals.find(g => g.id === p.goalId);
+        const goalTag = goal ? `<div class="text-[9px] text-orange-400/80 mb-1 flex items-center gap-1"><span class="material-symbols-rounded text-[10px]">flag</span> ${goal.title}</div>` : '';
+        
+        let borderClass = 'border-slate-700/50';
+        let bgClass = 'bg-slate-800/40';
+        
+        if(p.status === 'progress') {
+            borderClass = 'border-blue-500/40';
+            bgClass = 'bg-slate-800/80'; // Lebih terang dikit
+        } else if (p.status === 'done') {
+            borderClass = 'border-green-900/30';
+            bgClass = 'bg-slate-900/30 opacity-60'; // Redup
+        }
+
+        const card = document.createElement('div');
+        // Tambahkan 'active:scale-98' untuk feedback sentuhan
+        card.className = `${bgClass} p-3 rounded-xl border ${borderClass} shadow-sm active:scale-98 transition-all cursor-pointer relative group select-none flex flex-col`;
+        card.setAttribute('data-id', p.id);
+        
+        // Klik card -> Buka Action Sheet
+        card.onclick = () => window.openProjectSheet(p);
+
+        card.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    ${goalTag}
+                    <h4 class="text-sm font-bold text-white leading-snug ${p.status === 'done' ? 'line-through text-slate-500' : ''}">${p.name}</h4>
+                </div>
+                ${p.status === 'progress' ? '<div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>' : ''}
+                ${p.status === 'done' ? '<span class="material-symbols-rounded text-green-500 text-sm">check</span>' : ''}
+            </div>
+            <div class="mt-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span class="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Tap untuk aksi</span>
+            </div>
+        `;
+        return card;
+    };
+
+    // 4. Append ke Kolom masing-masing
+    const colTodo = document.getElementById('col-todo');
+    const colProgress = document.getElementById('col-progress');
+    const colDone = document.getElementById('col-done');
+
+    todo.forEach(p => colTodo.appendChild(createCard(p)));
+    progress.forEach(p => colProgress.appendChild(createCard(p)));
+    done.forEach(p => colDone.appendChild(createCard(p)));
+
+    // 5. Handle Empty States & Done Counts
+    if(progress.length === 0) colProgress.innerHTML = `<div class="p-4 border-2 border-dashed border-slate-800 rounded-xl text-center"><p class="text-[10px] text-slate-600">Fokus hari ini masih kosong.</p></div>`;
+    
+    // Update Badge & Placeholder Done
+    const doneBadge = document.getElementById('done-count-badge');
+    if(doneBadge) {
+        if(done.length > 0) {
+            doneBadge.innerText = done.length;
+            doneBadge.classList.remove('hidden');
+        } else {
+            doneBadge.classList.add('hidden');
+        }
+    }
+
+    const doneEmpty = document.getElementById('done-empty-state');
+    if(doneEmpty) {
+        if(done.length === 0) doneEmpty.classList.remove('hidden');
+        else doneEmpty.classList.add('hidden');
+    }
+
+    // 6. Re-init Sortable (Drag & Drop) - Opsional di Mobile tapi bagus ada
+    [colTodo, colProgress, colDone].forEach(el => {
+        if (el && window.Sortable) {
+            new Sortable(el, { group: 'kanban', animation: 150, delay: 150, delayOnTouchOnly: true, onEnd: (evt) => onDragEndCallback(evt) });
+        }
+    });
 }
 
 export function renderGoals(data) {
@@ -425,19 +501,32 @@ export function switchView(id) {
 
 // --- GAMIFICATION UI ---
 export function updateLevelUI(xp, level) {
+    // Desktop Elements
     const levelEl = document.getElementById('user-level');
     const xpEl = document.getElementById('user-xp');
     const barEl = document.getElementById('xp-bar');
 
-    // Hitung progress bar (0 - 100%)
-    // Sisa XP menuju level berikutnya
+    // --- TAMBAHKAN INI (MOBILE ELEMENTS) ---
+    const mobLevel = document.getElementById('mobile-user-level');
+    const mobXp = document.getElementById('mobile-user-xp');
+    const mobBar = document.getElementById('mobile-xp-bar');
+    // ---------------------------------------
+
+    // Hitung progress
     const currentLevelBaseXP = (level - 1) * 100;
     const xpInCurrentLevel = xp - currentLevelBaseXP;
-    const percentage = Math.min(Math.max(xpInCurrentLevel, 0), 100); // Clamp 0-100
+    const percentage = Math.min(Math.max(xpInCurrentLevel, 0), 100);
 
+    // Update Desktop
     if (levelEl) levelEl.innerText = `Lvl ${level}`;
     if (xpEl) xpEl.innerText = `${xp} XP`;
     if (barEl) barEl.style.width = `${percentage}%`;
+
+    // --- TAMBAHKAN INI (UPDATE TAMPILAN MOBILE) ---
+    if (mobLevel) mobLevel.innerText = `Lvl ${level}`;
+    if (mobXp) mobXp.innerText = `${xp} XP`;
+    if (mobBar) mobBar.style.width = `${percentage}%`;
+    // ----------------------------------------------
 }
 
 // --- CATEGORY UI ---
