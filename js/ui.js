@@ -139,6 +139,9 @@ export function renderTasks(data) {
             <div class="flex-1"><p class="text-sm text-slate-200 font-medium leading-snug">${t.text}</p></div>
             <button onclick="window.askDelete('tasks','${t.id}')" class="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                 <span class="material-symbols-rounded text-sm">delete</span>
+            </button>
+            <button onclick="window.moveTaskToProject('${t.id}')" class="text-slate-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mr-2" title="Pindah ke Project">
+                <span class="material-symbols-rounded text-sm">drive_file_move</span>
             </button>`;
 
         if (!el) {

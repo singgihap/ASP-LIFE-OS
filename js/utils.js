@@ -208,10 +208,16 @@ function timerFinished(isSilent = false) {
     updateBtnUI(false);
     document.title = "Selesai!";
     
+    // HAPUS atau comment bagian alert/notifikasi lama, GANTI dengan ini:
     if (!isSilent) {
+        const soundFinish = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
         soundFinish.play().catch(e => console.log("Audio autoplay blocked", e));
-        if(window.logEvent) window.logEvent(null, 'FOCUS_DONE', 'Sesi Fokus Selesai'); // Null uid sementara, nunggu global state
-        if(window.showEnhancedNotification) showEnhancedNotification("Waktu Habis! Istirahatlah.", 'success');
+        
+        // TAMPILKAN MODAL INTEGRASI
+        const savedDur = parseInt(localStorage.getItem('pomoDuration')) || 25;
+        document.getElementById('session-duration-display').innerText = savedDur;
+        document.getElementById('session-modal').classList.remove('hidden');
+        document.getElementById('session-modal').classList.add('flex');
     }
 
     setTimeout(() => {

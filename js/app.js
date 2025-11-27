@@ -334,11 +334,20 @@ function initRealtimeListeners(uid) {
         if(sel) sel.innerHTML = '<option value="">-- No Goal Linked --</option>' + globalGoals.map(g => `<option value="${g.id}">${g.title}</option>`).join('');
     });
     // Projects
-    onSnapshot(qRef('projects'), s => UI.renderProjects(s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted), globalGoals, async (evt) => {
-        const pid = evt.item.getAttribute('data-id');
-        const st = evt.to.id.replace('col-', '');
-        if (pid) await DB.updateItem(uid, 'projects', pid, { status: st });
-    }));
+    onSnapshot(qRef('projects'), s => {
+        // 1. Ambil data project bersih (filter yang dihapus)
+        const projData = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => !x.deleted);
+        
+        // 2. PENTING: Simpan ke variabel global agar fitur "Move Task" bisa membacanya
+        globalData.projects = projData; 
+
+        // 3. Render ke UI (Kode render dan drag-drop tetap sama)
+        UI.renderProjects(projData, globalGoals, async (evt) => {
+            const pid = evt.item.getAttribute('data-id');
+            const st = evt.to.id.replace('col-', '');
+            if (pid) await DB.updateItem(uid, 'projects', pid, { status: st });
+        });
+    });
     // Tasks
     onSnapshot(qRef('tasks'), s => {
         globalData.tasks = s.docs.map(d => d.data());
@@ -390,3 +399,118 @@ function initRealtimeListeners(uid) {
         }
     });
 }
+
+// js/app.js - Tambahkan di window exports
+
+window.closeSessionModal = () => {
+    document.getElementById('session-modal').classList.add('hidden');
+    document.getElementById('session-modal').classList.remove('flex');
+};
+
+window.saveSessionLog = async () => {
+    const note = document.getElementById('session-log-input').value || "Sesi Fokus Tanpa Judul";
+    const duration = document.getElementById('session-duration-display').innerText;
+    
+    // 1. Simpan ke Logs
+    await DB.logEvent(currentUser.uid, 'FOCUS_SESSION', `${note} (${duration} m)`, { duration: parseInt(duration) });
+    
+    // 2. Tambah XP Besar
+    await DB.addXP(currentUser.uid, 20); 
+    
+    // 3. Notifikasi & Tutup
+    window.closeSessionModal();
+    Utils.showEnhancedNotification(`Tercatat! +20 XP`, 'success');
+    document.getElementById('session-log-input').value = ''; // Reset
+};
+
+window.toggleFab = () => {
+    const menu = document.getElementById('fab-menu');
+    const icon = document.getElementById('fab-icon');
+    
+    // Toggle Class untuk animasi
+    if (menu.classList.contains('opacity-0')) {
+        // BUKA MENU
+        menu.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none', 'scale-0');
+        icon.style.transform = 'rotate(45deg)'; // Ikon + jadi x
+    } else {
+        // TUTUP MENU
+        menu.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none', 'scale-0');
+        icon.style.transform = 'rotate(0deg)';
+    }
+};
+
+// Tutup FAB kalau klik di tempat lain
+document.addEventListener('click', (e) => {
+    const fab = document.getElementById('fab-menu');
+    const btn = document.querySelector('button[onclick="toggleFab()"]');
+    if (!fab.contains(e.target) && !btn.contains(e.target) && !fab.classList.contains('opacity-0')) {
+        window.toggleFab();
+    }
+});
+
+window.toggleFab = () => {
+    const menu = document.getElementById('fab-menu');
+    const icon = document.getElementById('fab-icon');
+    
+    // Toggle Class untuk animasi
+    if (menu.classList.contains('opacity-0')) {
+        // BUKA MENU
+        menu.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none', 'scale-0');
+        icon.style.transform = 'rotate(45deg)'; // Ikon + jadi x
+    } else {
+        // TUTUP MENU
+        menu.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none', 'scale-0');
+        icon.style.transform = 'rotate(0deg)';
+    }
+};
+
+// Tutup FAB kalau klik di tempat lain
+document.addEventListener('click', (e) => {
+    const fab = document.getElementById('fab-menu');
+    const btn = document.querySelector('button[onclick="toggleFab()"]');
+    if (!fab.contains(e.target) && !btn.contains(e.target) && !fab.classList.contains('opacity-0')) {
+        window.toggleFab();
+    }
+});
+
+window.moveTaskToProject = async (taskId) => {
+    // 1. Ambil nama project (Bisa pakai prompt sederhana atau modal kalau mau canggih)
+    // Untuk efisiensi, kita pakai Prompt Native dulu agar cepat
+    const projects = globalData.projects || []; // Pastikan variable globalData.projects di-expose di app.js
+    
+    if (projects.length === 0) {
+        alert("Buat Project dulu di menu Projects!");
+        return;
+    }
+
+    let projectList = projects.map((p, index) => `${index + 1}. ${p.name}`).join('\n');
+    let choice = prompt(`Pindahkan ke Project nomor berapa?\n\n${projectList}`);
+    
+    if (choice) {
+        const index = parseInt(choice) - 1;
+        if (projects[index]) {
+            const targetProj = projects[index];
+            
+            // 2. Ambil data task lama (Kita perlu query dulu atau ambil dari memori)
+            const task = globalData.tasks.find(t => t.id === taskId);
+            
+            if (task) {
+                // 3. Tambahkan ke Collection 'projects' (sebagai item baru) 
+                // ATAU jadikan sub-task. Sesuai strukturmu, Project punya item sendiri.
+                // Kita akan hapus dari inbox, dan buat item baru di project.
+                
+                await DB.addItem(currentUser.uid, 'projects', {
+                    name: task.text, // Text inbox jadi nama task project
+                    goalId: targetProj.goalId || '',
+                    status: 'todo',
+                    projectId: targetProj.id // Opsional: grouping logic
+                });
+
+                // 4. Hapus dari Inbox (Soft Delete)
+                await DB.softDelete(currentUser.uid, 'tasks', taskId);
+                
+                Utils.showEnhancedNotification(`Dipindah ke ${targetProj.name}`, 'success');
+            }
+        }
+    }
+};
