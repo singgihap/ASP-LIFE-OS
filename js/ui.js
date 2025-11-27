@@ -105,17 +105,59 @@ export function renderNotes(data) {
 export function renderTasks(data) {
     const list = document.getElementById('inbox-list');
     if (!list) return;
-    list.innerHTML = '';
+    
+    // Update counter saja
     const pending = data.filter(t => !t.completed);
-    document.getElementById('inbox-count').innerText = pending.length;
-    if (pending.length === 0) { list.innerHTML = `<div class="col-span-full text-center text-slate-600 text-xs py-4">Inbox Kosong</div>`; return; }
+    const countEl = document.getElementById('inbox-count');
+    if(countEl) countEl.innerText = pending.length;
+    
+    if (pending.length === 0) { 
+        list.innerHTML = `<div class="col-span-full text-center text-slate-600 text-xs py-4">Inbox Kosong</div>`; 
+        return; 
+    }
+
+    // --- TEKNIK SMART DIFFING (Hanya update yang berubah) ---
+
+    // 1. Hapus elemen di layar yang sudah tidak ada di data baru (misal baru dihapus)
+    const currentIds = Array.from(list.children).map(el => el.getAttribute('data-id')).filter(id => id);
+    const newIds = pending.map(t => t.id);
+    
+    currentIds.forEach(id => {
+        if (!newIds.includes(id)) {
+            const el = list.querySelector(`[data-id="${id}"]`);
+            if(el) el.remove();
+        }
+    });
+
+    // 2. Tambah item baru atau biarkan item lama (jangan dirender ulang biar smooth)
     pending.forEach(t => {
-        const el = document.createElement('div');
-        el.className = 'card-enhanced p-3 relative group flex items-start gap-3';
-        el.innerHTML = `<button onclick="window.toggleTaskComplete('${t.id}')" class="mt-0.5 w-5 h-5 rounded-full border-2 border-slate-500 hover:border-green-500 hover:bg-green-500/20 transition-all flex-shrink-0"></button><div class="flex-1"><p class="text-sm text-slate-200 font-medium leading-snug">${t.text}</p></div><button onclick="window.askDelete('tasks','${t.id}')" class="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"><span class="material-symbols-rounded text-sm">delete</span></button>`;
-        list.appendChild(el);
+        let el = list.querySelector(`[data-id="${t.id}"]`);
+        
+        // Template HTML untuk isi item
+        const innerHTMLContent = `
+            <button onclick="window.toggleTaskComplete('${t.id}')" class="mt-0.5 w-5 h-5 rounded-full border-2 border-slate-500 hover:border-green-500 hover:bg-green-500/20 transition-all flex-shrink-0"></button>
+            <div class="flex-1"><p class="text-sm text-slate-200 font-medium leading-snug">${t.text}</p></div>
+            <button onclick="window.askDelete('tasks','${t.id}')" class="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <span class="material-symbols-rounded text-sm">delete</span>
+            </button>`;
+
+        if (!el) {
+            // Jika item belum ada, buat baru
+            el = document.createElement('div');
+            el.className = 'card-enhanced p-3 relative group flex items-start gap-3 fade-in';
+            el.setAttribute('data-id', t.id); // Penting untuk penanda ID
+            el.innerHTML = innerHTMLContent;
+            list.appendChild(el);
+        } else {
+            // Jika item sudah ada, cek apakah teks berubah? Jika tidak, jangan apa-apakan.
+            // Ini kunci agar animasi klik tidak reset.
+            if (!el.innerHTML.includes(t.text)) {
+                 el.innerHTML = innerHTMLContent;
+            }
+        }
     });
 }
+
 export function renderHabits(data) {
     const list = document.getElementById('habit-list');
     if (!list) return;

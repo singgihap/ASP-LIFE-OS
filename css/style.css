@@ -138,3 +138,48 @@ body, main {
         display: none !important;
     }
 }
+
+/* css/style.css - Bagian Tambahan */
+
+/* 1. Mencegah Text Selection (Biar kayak App) */
+body {
+    -webkit-tap-highlight-color: transparent; /* Hilangkan highlight biru saat tap di Android */
+    -webkit-touch-callout: none;
+    user-select: none; /* User gak bisa blok teks UI */
+}
+
+/* Tapi biarkan user blok teks di input dan note content */
+input, textarea, [contenteditable="true"], .selectable-text {
+    user-select: text;
+    cursor: text;
+}
+
+/* 2. Optimasi Tombol (Active State) */
+button:active {
+    transform: scale(0.96); /* Efek 'pencet' fisik */
+}
+
+/* 3. Smooth Scrolling untuk iOS */
+.overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 4. Transisi View yang lebih halus */
+.view-section {
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hidden {
+    display: none !important;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+/* 5. Safe Area untuk iPhone X ke atas (Penting utk PWA) */
+.safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 20px) !important;
+}
+
+header {
+    padding-top: env(safe-area-inset-top, 10px);
+}
