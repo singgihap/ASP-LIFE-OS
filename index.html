@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <title>Singgih Life OS (Personal)</title>
+    <meta name="theme-color" content="#0f172a">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { slate: { 750: '#2d3748', 850: '#1a202c' } }, fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'], } } }
+        }
+    </script>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="h-[100dvh] overflow-hidden flex selection:bg-blue-500 selection:text-white relative bg-slate-950 font-sans">
+
+    <div id="login-overlay" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-4 fade-in">
+        <div class="glass-panel p-8 rounded-3xl text-center max-w-md w-full relative z-10 border-slate-700/50 overflow-y-auto max-h-[90vh]">
+            <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-600/20"><span class="font-bold text-2xl text-white">S</span></div>
+            <h1 class="text-headline-md text-white mb-1">Singgih Life OS</h1>
+            <p class="text-body-md text-slate-400 mb-8">Personal Control & Clarity</p>
+            
+            <div id="login-loading" class="space-y-4 hidden">
+                <div class="loading-skeleton w-10 h-10 rounded-full mx-auto"></div>
+                <p class="text-xs text-slate-400 font-mono animate-pulse">CONNECTING...</p>
+                <div class="mt-4">
+                    <button onclick="window.location.reload()" class="btn-secondary w-full mb-2 text-xs py-2.5 rounded-lg">Refresh Page</button>
+                    <button onclick="showLoginButtons()" class="text-xs text-blue-400 underline">Retry Login</button>
+                </div>
+            </div>
+
+            <div id="login-forms" class="w-full space-y-4 text-left">
+                <div class="space-y-3">
+                    <div><label class="text-label-md text-slate-500 block mb-1.5">Email</label><input type="email" id="email-input" class="input-enhanced w-full" placeholder="name@example.com"></div>
+                    <div><label class="text-label-md text-slate-500 block mb-1.5">Password</label><input type="password" id="password-input" class="input-enhanced w-full" placeholder="••••••"></div>
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <button onclick="window.handleEmailLogin()" class="btn-primary rounded-xl py-3 text-sm font-bold">Masuk</button>
+                        <button onclick="window.handleEmailRegister()" class="btn-secondary rounded-xl py-3 text-sm font-bold">Daftar</button>
+                    </div>
+                </div>
+                <div class="relative flex py-3 items-center"><div class="flex-grow border-t border-slate-800"></div><span class="flex-shrink-0 mx-4 text-slate-600 text-[10px] uppercase font-bold">Atau</span><div class="flex-grow border-t border-slate-800"></div></div>
+                <button onclick="window.loginSystem()" class="w-full bg-white text-slate-900 font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-100 transition-all text-sm"><img src="https://www.google.com/favicon.ico" class="w-4 h-4"> Masuk dengan Google</button>
+                <div id="login-error-msg" class="text-rose-400 text-xs mt-4 hidden bg-rose-950/30 p-3 rounded-lg border border-rose-500/20 text-center"></div>
+            </div>
+        </div>
+    </div>
+    
+    <nav id="main-sidebar" class="sidebar w-16 md:w-64 bg-slate-900/90 backdrop-blur-xl border-r border-slate-800/50 flex flex-col justify-between flex-shrink-0 z-20 relative transition-all duration-300">
+        <div class="p-3 md:p-5 flex flex-col gap-3 border-b border-slate-800/50 mb-2 sticky top-0 bg-slate-900/95 z-10">
+    
+            <div class="flex items-center gap-3 overflow-hidden w-full">
+                <img id="user-avatar" class="w-10 h-10 rounded-xl bg-slate-800 flex-shrink-0 object-cover border border-slate-700 shadow-sm" src="">
+                <div class="sidebar-text flex-1 min-w-0">
+                    <h2 id="user-name" class="text-sm font-bold text-white truncate">User</h2>
+                    <div class="flex items-center justify-between">
+                        <p class="text-[10px] text-purple-400 font-bold uppercase tracking-wider" id="user-level">Lvl 1</p>
+                        <p class="text-[10px] text-slate-500 font-mono" id="user-xp">0 XP</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-text w-full bg-slate-800 rounded-full h-1.5 mt-1 overflow-hidden">
+                <div id="xp-bar" class="bg-gradient-to-r from-purple-600 to-blue-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        
+            
+            <div class="px-2 space-y-1 mt-2">
+                <button id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group hover:bg-slate-800 text-slate-400" onclick="switchView('dashboard')">
+                    <span class="material-symbols-rounded text-xl">dashboard</span><span class="sidebar-text text-sm font-medium">Dashboard</span>
+                </button>
+                <button id="nav-log" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group hover:bg-slate-800 text-slate-400" onclick="switchView('log')">
+                    <span class="material-symbols-rounded text-xl">history_edu</span><span class="sidebar-text text-sm font-medium">Daily Log</span>
+                </button>
+                <div class="my-2 border-t border-slate-800/50 mx-3"></div>
+                <button id="nav-goals" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group hover:bg-slate-800 text-slate-400" onclick="switchView('goals')">
+                    <span class="material-symbols-rounded text-xl">flag</span><span class="sidebar-text text-sm font-medium">Goals</span>
+                </button>
+                <button id="nav-projects" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group hover:bg-slate-800 text-slate-400" onclick="switchView('projects')">
+                    <span class="material-symbols-rounded text-xl">splitscreen</span><span class="sidebar-text text-sm font-medium">Projects</span>
+                </button>
+                <button id="nav-second-brain" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group hover:bg-slate-800 text-slate-400" onclick="switchView('second-brain')">
+                    <span class="material-symbols-rounded text-xl">psychology</span><span class="sidebar-text text-sm font-medium">Second Brain</span>
+                </button>
+                <button id="nav-library" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group hover:bg-slate-800 text-slate-400" onclick="switchView('library')">
+                    <span class="material-symbols-rounded text-xl">local_library</span><span class="sidebar-text text-sm font-medium">Library</span>
+                </button>
+                <button id="nav-finance" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group hover:bg-slate-800 text-slate-400" onclick="switchView('finance')">
+                    <span class="material-symbols-rounded text-xl">account_balance_wallet</span><span class="sidebar-text text-sm font-medium">Finance</span>
+                </button>
+                <div class="my-2 border-t border-slate-800/50 mx-3"></div>
+                <button id="nav-trash" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group hover:bg-rose-900/10 text-slate-400 hover:text-rose-400" onclick="switchView('trash')">
+                    <span class="material-symbols-rounded text-xl">delete</span><span class="sidebar-text text-sm font-medium">Trash</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-2 border-t border-slate-800/50 flex flex-col gap-1">
+             <button onclick="toggleSidebar()" class="w-full flex items-center justify-center p-2 rounded-xl text-slate-500 hover:text-white hover:bg-slate-800 transition-all" title="Toggle Sidebar">
+                 <span class="material-symbols-rounded text-xl" id="sidebar-icon">chevron_left</span>
+             </button>
+             <button onclick="toggleZenMode()" class="w-full flex items-center gap-3 p-2.5 rounded-xl text-slate-500 hover:text-purple-400 hover:bg-purple-950/30 transition-all nav-item justify-center md:justify-start mb-1">
+                <span class="material-symbols-rounded text-xl">self_improvement</span>
+                <span class="sidebar-text text-xs font-bold uppercase tracking-wider">Zen Mode</span>
+            </button>
+             <button onclick="window.logout()" class="w-full flex items-center gap-3 p-2.5 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-all nav-item justify-center md:justify-start">
+                 <span class="material-symbols-rounded text-xl">power_settings_new</span>
+                 <span class="sidebar-text text-xs font-bold uppercase tracking-wider">Shutdown</span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="flex-1 relative overflow-y-auto bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] transition-all">
+        
+        <header class="sticky top-0 z-30 glass-panel border-b border-slate-800/50 px-4 py-3 flex justify-between items-center shadow-sm">
+    
+            <div class="flex items-center gap-3 flex-shrink-0"> <div>
+                    <h1 class="text-xl md:text-3xl font-mono font-bold text-white tracking-tight leading-none" id="live-clock">--:--</h1>
+                    <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Active
+                    </p>
+                </div>
+
+                <div class="h-6 w-px bg-slate-700/30 block"></div>
+
+                <div id="weather-widget" class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-slate-800/50 flex items-center justify-center border border-slate-700/50 text-sm">
+                        <span id="weather-icon">🌤️</span>
+                    </div>
+                    <div class="flex flex-col leading-none">
+                        <span id="weather-temp" class="text-xs font-bold text-white">--°</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 flex-1 justify-end ml-2">
+                <div class="flex items-center input-enhanced rounded-full px-3 py-1.5 w-full max-w-[250px] shadow-inner gap-2 bg-slate-900/50 focus-within:bg-slate-900 transition-colors">
+                    <span class="material-symbols-rounded text-slate-500 text-base flex-shrink-0">add</span>
+                    <input class="bg-transparent border-none text-xs text-white placeholder-slate-500 focus:outline-none w-full font-medium min-w-0" onkeydown="handleQuickCapture(event)" placeholder="Task..." type="text">
+                </div>
+            </div>
+        </header>
+
+        <div class="p-4 md:p-8 pb-32 md:pb-8 max-w-7xl mx-auto min-h-[calc(100dvh-65px)]">
+            
+            <div class="view-section fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6" id="view-dashboard">
+                
+                <div id="card-timer" class="col-span-1 md:col-span-2 lg:col-span-2 card-enhanced group flex flex-col justify-between min-h-[200px] relative overflow-hidden">
+    
+                    <div class="relative z-10 max-w-[90%]"> 
+                        <h2 class="text-headline-md text-white mb-1">Halo, <span id="greeting-name">User</span>.</h2>
+                        <p class="text-body-md text-slate-400 mb-6">"Fokus satu hal, selesaikan."</p>
+                    </div>
+                    
+                    <div class="bg-slate-900/60 border border-slate-700/50 p-4 rounded-2xl relative z-10 backdrop-blur-sm">
+                        <div class="flex items-center justify-between gap-4">
+                            
+                            <div class="flex items-center gap-3 md:gap-4">
+                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 hidden sm:flex flex-shrink-0">
+                                    <span class="material-symbols-rounded text-blue-400 text-xl md:text-2xl">timer</span>
+                                </div>
+                                
+                                <div id="timer-view-mode" class="block">
+                                    <div onclick="toggleTimerEdit()" class="group flex items-baseline gap-2 cursor-pointer transition-all" title="Klik untuk ubah durasi">
+                                        <div class="font-mono text-2xl md:text-3xl font-bold text-white leading-none group-hover:text-blue-400 transition-colors" id="timer-display">25:00</div>
+                                        <span class="material-symbols-rounded text-[10px] md:text-xs text-slate-600 group-hover:text-blue-400 transition-colors mb-1">edit</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Fokus</div>
+                                </div>
+
+                                <div id="timer-edit-mode" class="hidden flex items-center gap-2 animate-fade-in">
+                                    <input type="number" id="custom-minutes-input" class="input-enhanced w-16 text-center font-bold font-mono text-sm p-1" value="25" min="1" max="180">
+                                    <button onclick="saveCustomTimer()" class="btn-primary w-8 h-8 rounded-lg flex items-center justify-center"><span class="material-symbols-rounded text-sm">check</span></button>
+                                    <button onclick="toggleTimerEdit()" class="text-slate-400 hover:text-white"><span class="material-symbols-rounded text-sm">close</span></button>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button onclick="toggleTimer()" id="timer-btn" class="btn-primary px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1 shadow-lg shadow-blue-500/20"><span class="material-symbols-rounded text-base">play_arrow</span> Start</button>
+                                <button onclick="resetTimer()" class="btn-secondary p-1.5 md:p-2 rounded-lg text-slate-400 hover:text-white"><span class="material-symbols-rounded text-lg">refresh</span></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-1 card-enhanced relative">
+                    <h3 class="text-title-lg text-white mb-4 flex gap-2 items-center"><span class="material-symbols-rounded text-rose-400 text-lg">favorite</span> Wellness</h3>
+                    <div class="flex justify-between bg-slate-900/50 p-2 rounded-xl mb-3 border border-slate-700/30">
+                        <button onclick="setMood('bad')" id="mood-bad" class="mood-btn text-2xl opacity-40 hover:opacity-100 hover:scale-110" title="Kurang">🙁</button>
+                        <button onclick="setMood('neutral')" id="mood-neutral" class="mood-btn text-2xl opacity-40 hover:opacity-100 hover:scale-110" title="Biasa">😐</button>
+                        <button onclick="setMood('good')" id="mood-good" class="mood-btn text-2xl opacity-40 hover:opacity-100 hover:scale-110" title="Baik">🙂</button>
+                        <button onclick="setMood('excellent')" id="mood-excellent" class="mood-btn text-2xl opacity-40 hover:opacity-100 hover:scale-110" title="Semangat">🔥</button>
+                    </div>
+                    <p id="mood-status" class="text-center text-xs text-slate-500 mt-1 mb-4 italic h-4">-</p>
+                    <div class="flex items-end justify-between mb-1"><span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Hidrasi</span><span id="water-count" class="text-blue-400 font-mono font-bold text-sm">0/8</span></div>
+                    <div class="flex gap-1 h-6 mb-2"><div class="water-bar flex-1 bg-slate-800 rounded-sm"></div><div class="water-bar flex-1 bg-slate-800 rounded-sm"></div><div class="water-bar flex-1 bg-slate-800 rounded-sm"></div><div class="water-bar flex-1 bg-slate-800 rounded-sm"></div><div class="water-bar flex-1 bg-slate-800 rounded-sm"></div><div class="water-bar flex-1 bg-slate-800 rounded-sm"></div><div class="water-bar flex-1 bg-slate-800 rounded-sm"></div><div class="water-bar flex-1 bg-slate-800 rounded-sm"></div></div>
+                    <button onclick="updateWater(1)" class="w-full btn-secondary py-1.5 text-xs font-bold text-blue-400 border-blue-500/30 hover:bg-blue-500/10 rounded-lg">+ 1 Gelas</button>
+                </div>
+
+                <div class="col-span-1 md:col-span-2 lg:col-span-1 card-enhanced flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-title-lg text-white flex items-center gap-2"><span class="material-symbols-rounded text-lg text-green-500">check_circle</span> Habits</h3>
+                        <button onclick="openHabitModal()" class="btn-secondary w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-white"><span class="material-symbols-rounded text-sm">add</span></button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1" id="habit-list"><div class="loading-skeleton h-16 w-full"></div></div>
+                </div>
+                
+                <div class="col-span-1 md:col-span-2 lg:col-span-4 card-enhanced">
+                    <div class="flex justify-between items-center mb-4"><h3 class="text-title-lg text-white">Inbox</h3><span class="status-badge status-info" id="inbox-count">0</span></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3" id="inbox-list"></div>
+                </div>
+            </div>
+
+            <div class="view-section fade-in hidden" id="view-log">
+                <div class="flex justify-between items-center mb-6">
+                    <div><h2 class="text-headline-md text-white">Daily Log</h2><p class="text-body-md text-slate-400">Jejak aktivitas hari ini.</p></div>
+                    <h3 class="text-2xl font-mono font-bold text-blue-400 hidden md:block" id="log-date-display">Today</h3>
+                </div>
+                <div class="card-enhanced">
+                    <div id="daily-timeline" class="space-y-0 pl-2 pt-4 pb-4"><div class="text-center py-12 text-slate-500">Loading...</div></div>
+                    <div class="mt-4 pt-4 border-t border-slate-700/50">
+                        <button onclick="window.closeDaySummary()" class="w-full btn-secondary py-3 rounded-xl text-sm font-bold hover:bg-slate-700/50 flex items-center justify-center gap-2 text-slate-300"><span class="material-symbols-rounded">lock</span> Close Day & Save Summary</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-section fade-in hidden h-full flex flex-col" id="view-projects">
+                <div class="flex justify-between items-center mb-6">
+                    <div><h2 class="text-headline-md text-white">Projects</h2></div>
+                    <button onclick="openProjectModal()" class="btn-primary px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2"><span class="material-symbols-rounded">add</span> New</button>
+                </div>
+                <div class="flex flex-col md:flex-row gap-6 overflow-y-auto md:overflow-hidden pb-20 md:pb-4 h-full custom-scroll">
+                    <div class="w-full md:w-1/3 flex flex-col bg-slate-900/40 rounded-2xl border border-slate-800/50 h-fit md:max-h-full md:min-w-[300px]"><div class="p-4 border-b border-slate-800/50 font-bold text-slate-400 text-xs uppercase tracking-widest flex justify-between"><span>To Do</span><div class="w-2 h-2 rounded-full bg-slate-500"></div></div><div class="p-3 space-y-3 overflow-y-auto min-h-[100px]" id="col-todo"></div></div>
+                    <div class="w-full md:w-1/3 flex flex-col bg-slate-900/40 rounded-2xl border border-slate-800/50 h-fit md:max-h-full md:min-w-[300px]"><div class="p-4 border-b border-slate-800/50 font-bold text-blue-400 text-xs uppercase tracking-widest flex justify-between"><span>In Progress</span><div class="w-2 h-2 rounded-full bg-blue-500"></div></div><div class="p-3 space-y-3 overflow-y-auto min-h-[100px]" id="col-progress"></div></div>
+                    <div class="w-full md:w-1/3 flex flex-col bg-slate-900/40 rounded-2xl border border-slate-800/50 h-fit md:max-h-full md:min-w-[300px]"><div class="p-4 border-b border-slate-800/50 font-bold text-green-400 text-xs uppercase tracking-widest flex justify-between"><span>Done</span><div class="w-2 h-2 rounded-full bg-green-500"></div></div><div class="p-3 space-y-3 overflow-y-auto min-h-[100px]" id="col-done"></div></div>
+                </div>
+            </div>
+
+            <div class="view-section fade-in hidden" id="view-goals">
+                <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-headline-md text-white">Personal OKRs</h2>
+                        
+                        <button onclick="openGoalModal()" class="btn-primary px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                            <span class="material-symbols-rounded">flag</span> Set Goal
+                        </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="goals-grid"></div>
+            </div>
+
+            <div class="view-section hidden fade-in h-full flex flex-col" id="view-finance">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    
+                    <div class="md:col-span-2 bg-gradient-to-br from-slate-800 via-slate-900 to-black p-8 rounded-3xl border border-slate-700/50 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                        
+                        <div class="relative z-10 mb-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-label-md text-slate-400 mb-2">Sisa Uang (Balance)</p>
+                                    <h2 class="text-4xl md:text-5xl font-bold text-white mb-2 font-mono tracking-tighter" id="finance-balance">Rp 0</h2>
+                                </div>
+                                <div class="text-right space-y-1">
+                                    <div><p class="text-emerald-400 text-[10px] font-bold uppercase">Masuk</p><p class="text-sm font-bold text-slate-200" id="finance-income">Rp 0</p></div>
+                                    <div><p class="text-rose-400 text-[10px] font-bold uppercase">Keluar</p><p class="text-sm font-bold text-slate-200" id="finance-expense">Rp 0</p></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="relative z-10 h-48 w-full bg-slate-900/50 rounded-xl p-2 border border-white/5">
+                            <canvas id="financeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card-enhanced">
+                        <h3 class="text-lg font-bold text-white mb-4">Catat Transaksi</h3>
+                        <form onsubmit="handleTransaction(event)" class="space-y-3">
+                            <div class="grid grid-cols-2 gap-2 bg-slate-900/50 p-1 rounded-xl border border-slate-700/50">
+                                <button type="button" onclick="setTransType('income')" id="btn-income" class="py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition-all">Masuk</button>
+                                <button type="button" onclick="setTransType('expense')" id="btn-expense" class="py-2 text-xs font-bold rounded-lg bg-rose-600 text-white shadow-md transition-all">Keluar</button>
+                            </div>
+                            <input type="hidden" id="trans-type" value="expense">
+                            <input type="number" id="trans-amount" placeholder="Rp..." class="input-enhanced w-full" required>
+                            <input type="text" id="trans-desc" placeholder="Catatan..." class="input-enhanced w-full" required>
+                            <div class="flex gap-2">
+                                <select id="trans-category" class="input-enhanced w-full text-xs">
+                                    <option value="">Loading...</option>
+                                </select>
+                                
+                                <button type="button" onclick="openCategoryModal()" class="btn-secondary w-10 flex items-center justify-center rounded-lg flex-shrink-0" title="Atur Kategori">
+                                    <span class="material-symbols-rounded text-sm">settings</span>
+                                </button>
+                            </div>
+                            <button type="submit" class="btn-primary w-full py-3 rounded-xl text-sm font-bold">Simpan</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card-enhanced flex-1 flex flex-col overflow-hidden">
+                    <h3 class="text-lg font-bold text-white mb-4">Riwayat</h3>
+                    <div class="overflow-y-auto custom-scroll flex-1 space-y-2" id="transaction-list"></div>
+                </div>
+            </div>
+
+            <div class="view-section fade-in hidden" id="view-second-brain">
+                <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-headline-md text-white">Second Brain</h2>
+                        
+                        <button onclick="openNoteModal()" class="btn-primary px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                            <span class="material-symbols-rounded">add</span> New Note
+                        </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" id="notes-grid"></div>
+            </div>
+
+            <div id="note-modal" onclick="if(event.target.id==='note-modal') this.classList.add('hidden')" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in">
+                <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-lg shadow-2xl relative">
+                    <button onclick="document.getElementById('note-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-500 hover:text-white"><span class="material-symbols-rounded">close</span></button>
+                    
+                    <h3 class="text-xl font-bold text-white mb-4">New Note</h3>
+                    
+                    <input type="text" id="new-note-title" placeholder="Title..." class="input-enhanced w-full mb-3 font-bold text-lg border-transparent focus:border-blue-500 transition-colors bg-slate-800/50">
+                    
+                    <div class="flex items-center justify-between mb-4 bg-slate-800/50 p-2 rounded-xl border border-slate-700/50">
+                        <div class="flex gap-2">
+                            <button type="button" onclick="selectNoteColor('slate')" id="color-slate" class="w-6 h-6 rounded-full bg-slate-600 border-2 border-white ring-2 ring-transparent transition-all hover:scale-110"></button>
+                            <button type="button" onclick="selectNoteColor('blue')" id="color-blue" class="w-6 h-6 rounded-full bg-blue-600 border-2 border-transparent hover:border-white ring-2 ring-transparent transition-all hover:scale-110"></button>
+                            <button type="button" onclick="selectNoteColor('green')" id="color-green" class="w-6 h-6 rounded-full bg-emerald-600 border-2 border-transparent hover:border-white ring-2 ring-transparent transition-all hover:scale-110"></button>
+                            <button type="button" onclick="selectNoteColor('rose')" id="color-rose" class="w-6 h-6 rounded-full bg-rose-600 border-2 border-transparent hover:border-white ring-2 ring-transparent transition-all hover:scale-110"></button>
+                            <button type="button" onclick="selectNoteColor('amber')" id="color-amber" class="w-6 h-6 rounded-full bg-amber-500 border-2 border-transparent hover:border-white ring-2 ring-transparent transition-all hover:scale-110"></button>
+                        </div>
+                        <input type="hidden" id="new-note-color" value="slate">
+                        
+                        <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-400 font-bold uppercase hover:text-white select-none">
+                            <input type="checkbox" id="new-note-pin" class="hidden peer">
+                            <span>Pin</span>
+                            <span class="material-symbols-rounded text-slate-600 peer-checked:text-blue-400 transition-colors">keep</span>
+                        </label>
+                    </div>
+
+                    <input type="text" id="new-note-tags" placeholder="Tags (e.g. idea, project, draft)" class="input-enhanced w-full mb-4 text-xs">
+                    
+                    <textarea id="new-note-content" rows="6" placeholder="Write your thoughts here..." class="input-enhanced w-full mb-4 text-sm leading-relaxed resize-none bg-slate-800/50"></textarea>
+                    
+                    <button onclick="createNote()" class="btn-primary w-full py-3 rounded-xl font-bold shadow-lg shadow-blue-600/20">Save Note</button>
+                </div>
+            </div>
+
+            <div class="view-section fade-in hidden" id="view-library">
+                <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-headline-md text-white">Library</h2>
+                        
+                        <button onclick="openLibraryModal()" class="btn-primary px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                            <span class="material-symbols-rounded">add</span> Add Entry
+                        </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-5" id="library-grid"></div>
+            </div>
+
+            <div class="view-section hidden fade-in h-full flex flex-col" id="view-trash">
+                <div class="flex justify-between items-center mb-8"><h2 class="text-headline-md text-white">Trash</h2><button onclick="loadTrashItems()" class="btn-secondary px-4 py-2 rounded-xl text-sm font-bold"><span class="material-symbols-rounded">refresh</span> Refresh</button></div>
+                <div id="trash-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <nav id="mobile-bottom-nav" class="md:hidden fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/50 flex justify-around items-center px-2 py-3 z-40 safe-area-pb">
+    
+    <button onclick="switchView('dashboard')" class="nav-item-mobile flex flex-col items-center gap-1 p-2 rounded-xl text-blue-500 transition-all w-16">
+        <span class="material-symbols-rounded text-2xl">dashboard</span>
+        <span class="text-[9px] font-bold">Home</span>
+    </button>
+
+    <button onclick="switchView('projects')" class="nav-item-mobile flex flex-col items-center gap-1 p-2 rounded-xl text-slate-500 hover:text-slate-300 transition-all w-16">
+        <span class="material-symbols-rounded text-2xl">splitscreen</span>
+        <span class="text-[9px] font-bold">Pro</span>
+    </button>
+
+    <button onclick="document.querySelector('input[placeholder=\'Task...\']').focus()" class="flex flex-col items-center justify-center -mt-8 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 border-4 border-slate-950 active:scale-90 transition-transform">
+        <span class="material-symbols-rounded text-3xl">add</span>
+    </button>
+
+    <button onclick="switchView('finance')" class="nav-item-mobile flex flex-col items-center gap-1 p-2 rounded-xl text-slate-500 hover:text-slate-300 transition-all w-16">
+        <span class="material-symbols-rounded text-2xl">wallet</span>
+        <span class="text-[9px] font-bold">Duit</span>
+    </button>
+
+    <button onclick="document.getElementById('mobile-menu-modal').classList.remove('hidden')" class="nav-item-mobile flex flex-col items-center gap-1 p-2 rounded-xl text-slate-500 hover:text-slate-300 transition-all w-16">
+        <span class="material-symbols-rounded text-2xl">menu</span>
+        <span class="text-[9px] font-bold">Menu</span>
+    </button>
+
+    </nav>
+    <div id="mobile-menu-modal" onclick="if(event.target.id==='mobile-menu-modal') this.classList.add('hidden')" class="fixed inset-0 z-[60] hidden flex items-end bg-black/80 backdrop-blur-sm fade-in md:hidden">
+        <div class="bg-slate-900 w-full rounded-t-3xl p-6 border-t border-slate-700 animate-slide-up">
+            <div class="flex justify-center mb-6"><div class="w-12 h-1 bg-slate-700 rounded-full"></div></div>
+            
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <button onclick="switchView('log');document.getElementById('mobile-menu-modal').classList.add('hidden')" class="flex flex-col items-center gap-2 text-slate-400 hover:text-white">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center"><span class="material-symbols-rounded text-xl">history_edu</span></div>
+                    <span class="text-xs">Log</span>
+                </button>
+                <button onclick="switchView('goals');document.getElementById('mobile-menu-modal').classList.add('hidden')" class="flex flex-col items-center gap-2 text-slate-400 hover:text-white">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center"><span class="material-symbols-rounded text-xl">flag</span></div>
+                    <span class="text-xs">Goals</span>
+                </button>
+                <button onclick="switchView('second-brain');document.getElementById('mobile-menu-modal').classList.add('hidden')" class="flex flex-col items-center gap-2 text-slate-400 hover:text-white">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center"><span class="material-symbols-rounded text-xl">psychology</span></div>
+                    <span class="text-xs">Brain</span>
+                </button>
+                <button onclick="switchView('library');document.getElementById('mobile-menu-modal').classList.add('hidden')" class="flex flex-col items-center gap-2 text-slate-400 hover:text-white">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center"><span class="material-symbols-rounded text-xl">local_library</span></div>
+                    <span class="text-xs">Lib</span>
+                </button>
+                <button onclick="switchView('trash');document.getElementById('mobile-menu-modal').classList.add('hidden')" class="flex flex-col items-center gap-2 text-slate-400 hover:text-white">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center"><span class="material-symbols-rounded text-xl">delete</span></div>
+                    <span class="text-xs">Trash</span>
+                </button>
+                <button onclick="window.logout()" class="flex flex-col items-center gap-2 text-rose-400">
+                    <div class="w-12 h-12 rounded-2xl bg-rose-900/20 flex items-center justify-center"><span class="material-symbols-rounded text-xl">power_settings_new</span></div>
+                    <span class="text-xs">Off</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="project-modal" onclick="if(event.target.id==='project-modal') this.classList.add('hidden')" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+            <button onclick="document.getElementById('project-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-500 hover:text-white"><span class="material-symbols-rounded">close</span></button>
+            <h3 class="text-title-lg text-white mb-6">Create Project</h3>
+            <div class="space-y-4">
+                <input type="text" id="new-project-name" placeholder="Project Name" class="input-enhanced w-full">
+                <div><label class="text-xs text-slate-400 mb-1 block">Linked Goal</label><select id="new-project-goal" class="input-enhanced w-full text-sm"><option value="">-- No Goal Linked --</option></select></div>
+                <button onclick="createProject()" class="btn-primary w-full py-3 rounded-xl font-bold mt-2">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="goal-modal" onclick="if(event.target.id==='goal-modal') this.classList.add('hidden')" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+            <button onclick="document.getElementById('goal-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-500 hover:text-white"><span class="material-symbols-rounded">close</span></button>
+            
+            <h3 class="text-title-lg text-white mb-6">Set New Goal</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-slate-400 font-bold uppercase ml-1 mb-1 block">I want to achieve...</label>
+                    <input type="text" id="new-goal-title" placeholder="e.g. Tabungan 100 Juta" class="input-enhanced w-full font-bold text-white">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-slate-400 font-bold uppercase ml-1 mb-1 block">Area</label>
+                        <select id="new-goal-area" class="input-enhanced w-full text-sm cursor-pointer">
+                            <option value="Finance">Finance & Wealth</option>
+                            <option value="Health">Health & Fitness</option>
+                            <option value="Career">Career & Skill</option>
+                            <option value="Spiritual">Spiritual</option>
+                            <option value="Relationship">Relationship</option>
+                            <option value="Lifestyle">Lifestyle / Hobby</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 font-bold uppercase ml-1 mb-1 block">Deadline</label>
+                        <input type="date" id="new-goal-date" class="input-enhanced w-full text-sm cursor-pointer text-slate-300">
+                    </div>
+                </div>
+                
+                <button onclick="createGoal()" class="btn-primary w-full py-3 rounded-xl font-bold shadow-lg shadow-blue-600/20 mt-2">Create Goal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="note-modal" onclick="if(event.target.id==='note-modal') this.classList.add('hidden')" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-lg shadow-2xl relative">
+            <button onclick="document.getElementById('note-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-500 hover:text-white"><span class="material-symbols-rounded">close</span></button>
+            <h3 class="text-xl font-bold text-white mb-4">New Note</h3>
+            <input type="text" id="new-note-title" placeholder="Title" class="input-enhanced w-full mb-2 font-bold text-lg">
+            <input type="text" id="new-note-tags" placeholder="Tags (e.g. idea, journal, draft)" class="input-enhanced w-full mb-4 text-xs">
+            <textarea id="new-note-content" rows="8" placeholder="Write here..." class="input-enhanced w-full mb-4 text-sm leading-relaxed resize-none"></textarea>
+            <button onclick="createNote()" class="btn-primary w-full py-3 rounded-xl font-bold">Save Note</button>
+        </div>
+    </div>
+
+    <div id="library-modal" onclick="if(event.target.id==='library-modal') this.classList.add('hidden')" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+            <button onclick="document.getElementById('library-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-500 hover:text-white"><span class="material-symbols-rounded">close</span></button>
+            
+            <h3 class="text-title-lg text-white mb-6">Add to Library</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-slate-400 font-bold uppercase ml-1 mb-1 block">Title / Name</label>
+                    <input type="text" id="new-lib-title" placeholder="" class="input-enhanced w-full font-bold text-white">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-slate-400 font-bold uppercase ml-1 mb-1 block">Type</label>
+                        <select id="new-lib-type" class="input-enhanced w-full text-sm cursor-pointer">
+                            <option value="book">Book</option>
+                            <option value="movie">Movie/Series</option>
+                            <option value="course">Course</option>
+                            <option value="article">Article</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 font-bold uppercase ml-1 mb-1 block">Status</label>
+                        <select id="new-lib-status" class="input-enhanced w-full text-sm cursor-pointer">
+                            <option value="queue">To Do</option>
+                            <option value="active">Active</option>
+                            <option value="done">Finished</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button onclick="createLibraryItem()" class="btn-primary w-full py-3 rounded-xl font-bold shadow-lg shadow-blue-600/20 mt-2">Save Item</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="habit-modal" onclick="if(event.target.id==='habit-modal') this.classList.add('hidden')" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+            <button onclick="document.getElementById('habit-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-500 hover:text-white"><span class="material-symbols-rounded">close</span></button>
+            <h3 class="text-title-lg text-white mb-6">New Habit</h3>
+            <input type="text" id="new-habit-name" placeholder="Habit Name" class="input-enhanced w-full mb-6">
+            <button onclick="createHabit()" class="btn-primary w-full py-3 rounded-xl font-bold">Start Habit</button>
+        </div>
+    </div>
+
+    <div id="category-modal" onclick="if(event.target.id==='category-modal') this.classList.add('hidden')" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative flex flex-col max-h-[80vh]">
+            <button onclick="document.getElementById('category-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-500 hover:text-white"><span class="material-symbols-rounded">close</span></button>
+            
+            <h3 class="text-title-lg text-white mb-4">Kelola Kategori</h3>
+            
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="new-cat-name" placeholder="Nama Kategori Baru..." class="input-enhanced w-full text-sm">
+                <button onclick="addCategory()" class="btn-primary w-12 rounded-xl flex items-center justify-center"><span class="material-symbols-rounded">add</span></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1" id="category-manager-list">
+                </div>
+        </div>
+    </div>
+
+    <div id="delete-modal" onclick="if(event.target.id==='delete-modal') closeDeleteModal()" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 fade-in">
+        <div class="glass-panel border border-rose-500/30 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden">
+            <div class="flex flex-col items-center text-center relative z-10">
+                <span class="material-symbols-rounded text-3xl text-rose-500 mb-4">warning</span>
+                <h3 class="text-title-lg text-white mb-2" id="delete-modal-title">Hapus Item?</h3>
+                <p class="text-body-md text-slate-400 mb-6">Tindakan ini akan memindahkan item ke Trash.</p>
+                <div class="grid grid-cols-2 gap-3 w-full">
+                    <button onclick="closeDeleteModal()" class="btn-secondary w-full py-3 rounded-xl font-bold">Batal</button>
+                    <button onclick="executeDelete()" class="w-full bg-rose-600 hover:bg-rose-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-rose-600/20">Hapus</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="btn-exit-zen" onclick="toggleZenMode()" class="bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-600 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md transition-all flex items-center gap-2">
+        <span class="material-symbols-rounded text-sm">close</span> Exit Focus
+    </button>
+    <script type="module" src="js/app.js"></script>
+
+</body>
+</html>
