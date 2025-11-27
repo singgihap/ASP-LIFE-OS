@@ -9,8 +9,49 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); colo
 .text-body-md { font-size: 0.875rem; font-weight: 400; line-height: 1.5; }
 
 /* Components */
-.glass-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
-.card-enhanced { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(71, 85, 105, 0.4); border-radius: 1rem; padding: 1.25rem; transition: all 0.2s ease; position: relative; overflow: hidden; }
+.glass-panel {
+    background: rgba(15, 23, 42, 0.85); /* Sedikit lebih gelap agar teks kontras */
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Modal di Mobile Menu */
+#mobile-menu-modal .bg-slate-900 {
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#mobile-bottom-nav {
+    background: rgba(15, 23, 42, 0.8) !important; /* Transparan */
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.card-enhanced {
+    background: rgba(30, 41, 59, 0.4); /* Lebih transparan */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.1); /* Highlight atas */
+    border-radius: 1.25rem; /* Lebih membulat */
+    padding: 1.25rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Efek Glow Halus saat Hover/Active */
+.card-enhanced:hover, .card-enhanced:active {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(59, 130, 246, 0.3); /* Biru samar */
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.1); /* Pendaran cahaya biru */
+    transform: translateY(-2px) scale(1.01); /* Sedikit naik */
+}
 
 /* Inputs */
 .input-enhanced { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(71, 85, 105, 0.5); padding: 0.75rem 1rem; border-radius: 0.75rem; color: #e2e8f0; font-size: 0.9375rem; outline: none; transition: all 0.2s; }
@@ -61,6 +102,17 @@ select.input-enhanced option { background-color: #0f172a; color: #e2e8f0; paddin
 /* Animations */
 .fade-in { animation: fadeIn 0.3s ease-in; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+@keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Animasi untuk item list muncul satu-persatu (Stagger) */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
 
 /* --- ZEN MODE (FOCUS) --- */
 body.zen-mode {
